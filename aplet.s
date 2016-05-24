@@ -32,6 +32,9 @@ ASSEMBLE
 	Link	_Entry
 	Link	_Exit
 	Link	_Action		( Include all the variables needed by the aplet structure )
+	Link	_Prepare
+	Link	_Display
+	Link	_DispXYMini
 
 * Put here your self-made label. Do not forget to DEFINE AND INT_xx them beneath.  
 
@@ -41,6 +44,9 @@ DEFINE Main		INT_00
 DEFINE Entry	INT_01
 DEFINE Exit		INT_02
 DEFINE Action	INT_03
+DEFINE Prepare	INT_04
+DEFINE Display	INT_05
+DEFINE DispXYMini INT_06
 
 ASSEMBLE
 	Vfield  IntTable,DirVar
@@ -57,8 +63,23 @@ RPL
 * switch to another aplet, the content will be deleted.
 * To ease the access to your variables, use alias like:
 
+DEFINE MODE_D	INT_00	( Mode Dec )
+DEFINE MODE_H	INT_01	( Mode Hex )
+DEFINE MODE_B	INT_02	( Mode Bin )
+DEFINE UNSIGNED	INT_00	( unsigned )
+DEFINE SIGNED	INT_01	( signed )
 
-* Make your own variable here. 
+DEFINE  AppVar! TopicVar1!
+DEFINE  AppVar@ TopicVar1@
+DEFINE  AppMode! TopicVar2!
+DEFINE  AppMode@ TopicVar2@
+DEFINE  AppSign! TopicVar3!
+DEFINE  AppSign@ TopicVar3@
+
+ASSEMBLE
+=DISPXYmini	EQU	#3F8A0					( unsupported entry to use the miniFONT )
+RPL
+DEFINE CLEARSCREEN HARDBUFF ZEROZERO BINT_131d SIXTYFOUR GROB!ZERODRP NULL$ DISPROW1
 
 DEFINE	Save@	LastBut3
 DEFINE	Save!	LastBut3 REPLACE DROP
@@ -89,41 +110,93 @@ NAMELESS _Main ::
 		}
 		ONE KeyFace
 	;
-    TRUE {
-		{ ::
-		; }
+	TRUE 
+	{
+
+		{ :: "BIN" MakeStdLabel ; :: MODE_B AppMode! Display ; }
+		{ :: "BIN" MakeBoxLabel ; :: MODE_B AppMode! Display ; }
+
+
+		{ :: "HEX" MakeStdLabel ; :: MODE_H AppMode! Display ; }
+		{ :: "HEX" MakeBoxLabel ; :: MODE_H AppMode! Display ; }
 	}
-    ONE
+
+	ONE
 	' ::
 		TURNMENUON RECLAIMDISP
 		ERRJMP
-    ;
+	;
 ;
 
 *************************************************
 *			Begin of the presentation
 *************************************************
 NAMELESS _Entry ::
-	TURNMENUOFF
 	HARDBUFF ZEROZERO BINT_131d SIXTYFOUR GROB!ZERODRP
 
 	$ "HexCalcP By Jejer" DISPROW1
 	$ "Press Enter to start" DISPROW8
 ;
-**************************************************
-*			End of the presentation
-**************************************************
+
 
 
 *************************************************
 *			Begin of the program
 *************************************************
 NAMELESS _Action ::
-	$ "Hello World!" Ck&DoMsgBox
+	Prepare
 ;
+
+
 **************************************************
-*			End of the program
+*			Start Of Prepare
 **************************************************
+NAMELESS _Prepare ::
+	HARDBUFF ZEROZERO BINT_131d SIXTYFOUR GROB!ZERODRP	( clearscreen )
+
+	INT_00 AppVar!			( AppVar init to 0 )
+	MODE_H AppMode!			( AppMode init to Hex )
+	UNSIGNED AppSign!		( AppSign init to UNSIGNED )
+
+	Display
+	WaitForKey
+;
+
+
+**************************************************
+*			Start Of Display
+**************************************************
+NAMELESS _Display ::
+	CLEARSCREEN
+
+	BINT0 BINT5 $ "BIN" DispXYMini 	( display "BIN" )
+	BINT130 BINT0 PIXON
+	BINT120 BINT0 PIXON
+	BINT110 BINT0 PIXON
+	BINT100 BINT0 PIXON
+	BINT90  BINT0 PIXON
+	BINT80  BINT0 PIXON
+	BINT70  BINT0 PIXON
+	BINT60  BINT0 PIXON
+
+	BINT0 BINT25 $ "HEX" DispXYMini 	( display "HEX" )
+	BINT0 BINT45 $ "DEC" DispXYMini 	( display "DEC" )
+
+	DispMenu
+;
+
+
+**************************************************
+*			Start Of Utilities
+**************************************************
+NAMELESS _DispXYMini ::
+	HARDBUFF										( show the text on hardbuff ) 
+	FOUR ROLL FOUR ROLL								( take X and Y coordinate )
+	FOUR ROLL DUPLEN$ 								( take the string, duplicate and give length )
+	FOUR #* 										( length * 4 )
+	DISPXYmini										( Display it in miniFont *unsupported entry* )
+	DROP											( drop ) 
+;													( end of DispXYMini )
 
 
 NAMELESS _Exit ::
@@ -152,10 +225,10 @@ ASSEMBLE
 RPL
 
 **************************************************
-*		     Note of the aplet			 *
+*			Note of the aplet
 **************************************************
-* if you want to put text in a note do it here   *
-* beneath, between the " "				 *
+* if you want to put text in a note do it here
+* beneath, between the " "
 **************************************************
 
 $ "Put your note here!"
