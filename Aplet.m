@@ -1,7 +1,0 @@
-TITLE    Aplet Vide
-OUTPUT   APLET000.000
-LLIST    aplet.lr
-SUPPRESS XR
-OPTION   CODE
-REL      aplet.o
-END
