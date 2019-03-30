@@ -32,7 +32,7 @@ CFLAGS ?= -std=c99 -Wall -Os -I$(INC) -L$(LIB) \
 
 crt0.o: CFLAGS += -msingle-pic-base -fpic -mpic-register=r10
 
-LDFLAGS := -L$(LIB) -T MMUld.script -lhplib -lgcc -static --gc-sections
+LDFLAGS := -L$(LIB) -T MMUld.script -lhpg -lhplib -lgcc -static --gc-sections
 
 
 all: believe

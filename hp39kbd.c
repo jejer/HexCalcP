@@ -23,6 +23,77 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "hp39kbd.h"
 #include "main.h"
 
+void __keybdelay()
+{
+	// REPLACE BY SOMETHING MORE SOPHISTICATED LATER
+	int k;
+
+	for(k=0;k<100;++k) ;
+}
+
+void keyb_getmatrix(keymatrix *m)
+{
+    // // by Claudio, with portions (well, most of it) of code by Al
+
+    int lo = 0, hi = 0;
+
+    int col;
+    unsigned int control;
+
+    for (col = 7; col >= 4; --col) {
+
+        control = 1 << ((col + 8) * 2); //set the correct col pin to output, others inputs
+        control = control | 0xAAA9; //fix up the lower bits
+        *GPGCON = control; // write the new control value.
+
+        // DELAY 100us APPROX.
+        __keybdelay();
+
+        hi = (hi << 8) | ((~( *GPGDAT)) & 0xfe);
+
+    }
+
+    for (; col >= 0; --col) {
+
+        control = 1 << ((col + 8) * 2); //set the correct col pin to output, others inputs
+        control = control | 0xAAA9; //fix up the lower bits
+        *GPGCON = control; // write the new control value.
+
+        // DELAY 100us APPROX.
+        __keybdelay();
+
+        lo = (lo << 8) | ((~( *GPGDAT)) & 0xfe);
+
+    }
+
+    *GPGCON = 0x5555AAA9; //restore default
+
+    hi |= ((*GPFDAT) & 0x70) << 24;
+    hi |= (*GPFDAT) << 31;
+
+    m->words[0] = lo;
+    m->words[1] = hi;
+
+    return;
+}
+
+int get_1st_key(int wait) {
+	keymatrix m;
+	keyb_getmatrix(&m);
+	if(wait) {
+		// wait for a non-shift key to be pressed
+		// while( ((m.words[0]&0x8fffffff)|m.words[1] )==0 ) keyb_getmatrix(&m);
+		while (!any_key_pressed);
+	}
+
+	for (int i = 0; i < 64; ++i)
+	{
+		if (m.full & (((ULONGLONG)1)<<i))
+		{
+			return i;
+		}
+	}
+}
 
 int
 get_key(void)
@@ -32,9 +103,14 @@ get_key(void)
 	// deal with the modifier keys
 	if (comma_pressed) {
 		return event_handler(3, 4);
+	} else if (alpha_pressed) {
+		return event_handler(4, 4);
+	} else if (shift_pressed) {
+		return event_handler(5, 4);
 	} else if (on_pressed) {
-		return event_handler(0, 4);
-	} else if (!any_normal_key_pressed) {
+		return event_handler(6, 4);
+	}
+	 else if (!any_normal_key_pressed) {
 		return 0;
 	}
 

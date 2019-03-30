@@ -21,14 +21,15 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include <hpstdio.h>
 #include <hpconio.h>
+#include <hpgraphics.h>
 #include "hp39kbd.h"
 #include "display.h"
 #include "main.h"
 
-
 int
 event_handler(unsigned row, unsigned col)
 {
+	return row*10+col;
 	// [APLET]
 	if (row == 0 && col == 7) {
 		// exit immediately
@@ -73,6 +74,23 @@ event_handler(unsigned row, unsigned col)
 int
 main(void)
 {
+	keymatrix matrix;
+	hpg_set_mode_gray16(1);
+
+	hpg_set_font(hpg_stdscreen, hpg_get_bigfont());
+	hpg_set_color(hpg_stdscreen, HPG_COLOR_GRAY_6);
+
+	hpg_clear();
+	hpg_draw_text("Hello, world!", 0, 0);
+
+	hpg_set_font(hpg_stdscreen, hpg_get_minifont());
+	hpg_set_color(hpg_stdscreen, HPG_COLOR_BLACK);
+	hpg_draw_text("Hello, world!", 0, 5);
+
+	hpg_flip(); //updates the screen with the new image (needed in double-buffered mode)
+	while (!any_key_pressed);
+
+	hpg_set_mode_mono(0);
 	clear_screen();
 	printf(
 		"test"
@@ -90,12 +108,22 @@ main(void)
 		"Refresh: [HOME]   About:  [SYMB]"
 	);
 
+	int x = 0;
 	for (;;) {
-		int k = get_key();
-		if (k == 5)  // [APLET]
-			return 0;  // exit program
-		else if (k == 7)  // [SYMB]
-			return show_credits();
+		delay(400000);
+		int key = get_1st_key(1);
+		clear_screen();
+		gotoxy(0, 0);
+		printf("%d\n", key);
+		keyb_getmatrix(&matrix);
+		gotoxy(0, 1);
+		printf("%x\n", matrix.words[0]);
+		gotoxy(0, 2);
+		printf("%x\n", matrix.words[1]);
+		gotoxy(0, 3);
+		printf("%d", x);
+		x++;
+		matrix.full = 0;
 	}
 }
 
