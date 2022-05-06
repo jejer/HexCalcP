@@ -79,13 +79,13 @@ void keyb_getmatrix(keymatrix *m)
 
 int get_1st_key(int wait) {
 	keymatrix m;
-	keyb_getmatrix(&m);
 	if(wait) {
 		// wait for a non-shift key to be pressed
 		// while( ((m.words[0]&0x8fffffff)|m.words[1] )==0 ) keyb_getmatrix(&m);
 		while (!any_key_pressed);
 	}
 
+	keyb_getmatrix(&m);
 	for (int i = 0; i < 64; ++i)
 	{
 		if (m.full & (((ULONGLONG)1)<<i))
@@ -93,6 +93,7 @@ int get_1st_key(int wait) {
 			return i;
 		}
 	}
+	return get_1st_key(wait);
 }
 
 int

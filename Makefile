@@ -1,55 +1,58 @@
-.PHONY: all believe clean
-.SECONDARY: $(OBJ)
+.SECONDARY: $(OBJ) $(ELF) $(HP)
 
-ifeq ($(TARGET),)
-    $(info Inspecting compiler to use...)
-    ifneq ($(shell which arm-elf-gcc),)
-        TARGET=arm-elf
-    else
-        ifneq ($(shell which arm-linux-gcc),)
-            TARGET=arm-linux
-        else
-            $(error No compiler found. Check $$PATH or provide a $$TARGET)
-        endif
-    endif
+INCLUDE_PATH= "$(HPGCC)\include"
+LIBS_PATH= "$(HPGCC)\lib"
+
+export CC= arm-elf-gcc
+export AR= arm-elf-ar
+export ELF2HP= elf2hp
+
+export C_FLAGS= -std=c99 -mtune=arm920t -mcpu=arm920t \
+	-mlittle-endian -fomit-frame-pointer -Wall \
+	-Os -I$(INCLUDE_PATH) -L$(LIBS_PATH)
+# export C_FLAGS= -std=c99 -Wall -Os -I$(INCLUDE_PATH) -L$(LIBS_PATH) \
+# 	-mtune=arm920t -mcpu=arm920t -mlittle-endian -msoft-float \
+# 	-fomit-frame-pointer -fdata-sections -ffunction-sections
+# add this for Thumb interwork mode:
+# export C_FLAGS += -mthumb-interwork -mthumb
+
+export LD= arm-elf-ld
+export LD_FLAGS= -L$(LIBS_PATH) -T MMUld.script $(LIBS_PATH)/crt0.o 
+export LIBS= -lwin -lggl -lhpg -lhplib -lgcc
+
+SRC = $(wildcard *.c)
+
+OBJ = $(SRC:%.c=%.o)
+
+ELF = $(SRC:%.c=%.elf)
+
+HP = $(SRC:%.c=%.hp)
+
+all: hp2aplet2 HexCalcP.apt
+
+hp2aplet2:
+ifeq (, $(shell which hp2aplet2))
+	cp build_tools/hp2aplet2.exe $(HPGCC)\bin\hp2aplet2.exe
 endif
 
-CC := $(TARGET)-gcc
-LD := $(TARGET)-ld
-
-ELF2HP ?= elf2hp
-HP2APT ?= hp2aplet
-
-SRC ?= $(wildcard *.c)
-OBJ ?= $(SRC:%.c=%.o)
-INC ?= "$(HPGCC)\include"
-LIB ?= "$(HPGCC)\lib"
-
-
-CFLAGS ?= -std=c99 -Wall -Os -I$(INC) -L$(LIB) \
-	-mtune=arm920t -mcpu=arm920t -mlittle-endian -msoft-float \
-	-fomit-frame-pointer -fdata-sections -ffunction-sections
-
-crt0.o: CFLAGS += -msingle-pic-base -fpic -mpic-register=r10
-
-LDFLAGS := -L$(LIB) -T MMUld.script -lhpg -lhplib -lgcc -static --gc-sections
-
-
-all: believe
-
-believe: HexCalcP.apt
-
 clean:
-	rm *.o *.elf *.hp
+	rm -rf *.o
+	rm -rf *.elf
+	rm -rf *.hp
+	rm -rf *.apt
 
-%.apt: %.hp
-	$(HP2APT) $< $@ "HexCalcP"
+
+%.o: %.c
+	$(CC) $(C_FLAGS) -c $< -o $@
+
+%.elf: $(OBJ)
+	$(LD) $(OBJ) $(LD_FLAGS) $(LIBS) -o $@
 
 %.hp: %.elf
 	$(ELF2HP) $< $@
 
-%.elf: $(OBJ)
-	$(LD) $(OBJ) $(LDFLAGS) -o $@
+%.apt: %.hp
+	hp2aplet2.exe $< $@ "HexCalcP"
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+
+
